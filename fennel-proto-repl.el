@@ -1922,7 +1922,8 @@ TYPE is a kind of error, used to handle internal REPL errors."
 POS is a position in an argument list."
   (when-let* ((signature
                (condition-case nil
-                   (append (car (read-from-string message)) nil)
+                   (mapcar (lambda (x) (format "%s" x))
+                           (append (car (read-from-string message)) nil))
                  (error nil))))
     (let* ((method? (string-match-p ":" name))
            (args (if method?
