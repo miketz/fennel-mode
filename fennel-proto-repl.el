@@ -1728,6 +1728,37 @@ interactable error screen."
 (defvar fennel-proto-repl--reloading-buffer nil
   "Set by `fennel-proto-repl-reload'.")
 
+(defun fennel-proto-repl-guess-project-module-name (project-root)
+  "Guess the module name for the current file based on project structure.
+
+Absolute name of the current file or buffer is checked against the
+PROJECT-ROOT. If matched, the PROJECT-ROOT part is removed from the
+filename. Then all path separators are replaced with dots."
+  (let ((project-root (expand-file-name project-root)))
+    (thread-last
+      (or (buffer-file-name) (buffer-name))
+      expand-file-name
+      file-name-sans-extension
+      (string-remove-suffix "/init")
+      (string-remove-prefix project-root)
+      (replace-regexp-in-string "/" "."))))
+
+(defun fennel-proto-repl-get-module (ask? last-module)
+  "Ask for the name of a module for the current file.
+
+If ASK? or LAST-MODULE were not supplied, asks for the name of a module.
+
+When `fennel-proto-repl-project-integration' is enabled, tries to guess
+the module name based on the project structure, if any."
+  (if-let* ((project-type fennel-proto-repl-project-integration)
+            (project (fennel-proto-repl-project-current project-type)))
+      (fennel-get-module
+       (or ask? (not last-module))
+       (or last-module
+           (fennel-proto-repl-guess-project-module-name
+            (fennel-proto-repl-project-root project-type project))))
+    (fennel-get-module ask? last-module)))
+
 (defun fennel-proto-repl-reload (ask?)
   "Reload the module for the current file.
 
@@ -1742,7 +1773,7 @@ Queries the user for a module name upon the first run for a given
 buffer, or when given a prefix arg."
   (interactive "P")
   (comint-check-source buffer-file-name)
-  (fennel-get-module ask? fennel-module-name)
+  (fennel-proto-repl-get-module ask? fennel-module-name)
   (when (and (file-exists-p (concat (file-name-base nil) ".lua"))
              (yes-or-no-p "Lua file for module exists; delete it first?"))
     (delete-file (concat (file-name-base nil) ".lua")))
