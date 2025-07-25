@@ -1,7 +1,7 @@
 # Fennel Mode
 
 Font-lock, indentation, navigation, documentation, and REPL support for the
-[Fennel](https://fennel-lang.org) programming language.
+[Fennel](https://fennel-lang.org) programming language in Emacs.
 
 Supports `M-x imenu` for quick navigation to local definitions.
 
@@ -14,13 +14,8 @@ Add this to your config:
 (add-to-list 'auto-mode-alist '("\\.fnl\\'" . fennel-mode))
 ```
 
-Note that `fennel-mode` doesn't inherit from `lisp-mode` since 0.4.0, and
-instead switched to `prog-mode`.  This means that there is no longer any way to
-declare shared functionality (such as paredit) that you want to be applied to every
-lisp you use; you have to add hooks specifically to `fennel-mode-hook`.
-
-You'll also probably want to use [fennel-ls][8], which works great
-with [eglot][9]. In Emacs 30+, it will work automatically once
+Separately you'll also probably want to use [fennel-ls][8], which works
+great with [eglot][9]. In Emacs 30+, it will work automatically once
 `fennel-ls` is installed; in earlier versions you need to add this to
 your config:
 
@@ -67,9 +62,11 @@ path.  You can override the location by setting `inferior-lisp-program`
 or invoking `C-u M-x fennel-repl`.  For instance, if you have [a stdio
 REPL][2] in a [LÖVE][3] game, you can set this to `love .`.
 
-Note that finding the definition of a function with `M-.` only works when the
-function is in scope for the REPL, which means it's usually best to
-load a module and set it as a global if you want to use it this way.
+Note that many evaluation or jump features require having the
+functions in the repl scope, not just in scope for the file. The repl
+cannot "enter" a file as this concept does not exist at runtime in Lua.
+Running `C-c C-k` will load the buffer into a module but will not dump
+its contents into the repl; you would need `C-c C-r` for that.
 
 ## Antifennel
 
@@ -101,7 +98,7 @@ more robust interactive experience.  Advantages over the default
 * Running multiple REPLs is easier, and different buffers can be
   linked to different REPLs.
 * Synchronous and Asynchronous API.
-* Support for Eldoc and Xref.
+* Support for Eldoc and Xref without eglot/fennel-ls.
 * Configurable dynamic font-locking of globals and macros
 * Project integration via `project.el` or `projectile`.
 
@@ -159,7 +156,8 @@ REPL process can be passed via the `:fennel-cmd` header argument.
 
 ## Flymake support
 
-The Flymake backend depends on the [fennel-ls][8] for linting.
+The Flymake backend depends on the [fennel-ls][8] for linting, if you
+would rather avoid using eglot.
 
 Installation is similar to the other modules:
 
