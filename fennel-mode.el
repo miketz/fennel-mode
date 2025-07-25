@@ -92,15 +92,7 @@ This variable will be removed in the 1.0.0 release of `fennel-mode'.")
   "Logging is now a feature of `fennel-proto-repl' mode.
 This variable will be removed in the 1.0.0 release of `fennel-mode'.")
 
-(define-obsolete-variable-alias
-  'fennel-repl-minify-code
-  nil
-  "fennel-mode 0.7.0"
-  "Minification is no longer preformed; variable value is ignored.
-If you exerience problems with sending expressions to the REPL, try the
-`fennel-proto-repl' mode.
-
-This variable will be removed in the 1.0.0 release of `fennel-mode'.")
+(make-obsolete-variable 'fennel-repl-minify-code nil "fennel-mode 0.7.0")
 
 (defcustom fennel-mode-repl-prompt ">>"
   "String that matches REPL prompt.
