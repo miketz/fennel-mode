@@ -572,11 +572,18 @@ variable."
 (defalias 'fennel-eval-form-and-next 'lisp-eval-form-and-next)
 (defalias 'fennel-eval-region 'lisp-eval-region)
 
+(defun fennel-format-replace ()
+  (when (< 0 (shell-command-on-region (point-min) (point-max) "fnlfmt -"
+                                      "*fennel-format*" nil
+                                      "*fennel-error*" t))
+    (error "could not format %s" (current-buffer)))
+  (get-buffer "*fennel-format*"))
+
 (defun fennel-format-region (start end)
   "Run fnlfmt on the region from START to END."
   (interactive "r")
   (if (executable-find "fnlfmt")
-      (shell-command-on-region start end "fnlfmt -" nil t)
+      (replace-region-contents start end 'fennel-format-replace)
     (message "fnlfmt not found")))
 
 (defun fennel-format ()
