@@ -4,7 +4,7 @@
 
 ;; Author: Andrey Listopadov
 ;; URL: https://git.sr.ht/~technomancy/fennel-mode
-;; Version: 0.6.1
+;; Version: 0.6.2
 ;; Created: 2023-04-08
 ;; Keywords: languages, tools
 ;; Package-Requires: ((emacs "28.1"))
@@ -128,7 +128,7 @@
                                 (when (or (not= k :_G)
                                           (not= k :___repl___))
                                   (values k v)))
-                 protocol* {:version \"0.6.1\"
+                 protocol* {:version \"0.6.2\"
                             :id -1
                             :op nil
                             :env protocol-env}
@@ -175,13 +175,13 @@
                    ;; the received message doesn't correspond to the
                    ;; current protocol.id, send a retry OP so the client
                    ;; retries the message later.
-                   (var response (eval (io/read :l) {:env {}}))
-                   (while (not= response.id id)
-                     (protocol.message [[:id {:sym id}]
-                                        [:op {:string :retry}]
-                                        [:message {:string (fennel.view response {:one-line? true})}]])
-                     (set response (eval (io/read :l) {:env {}})))
-                   response)
+                   (match (eval (io/read :l) {:env {}})
+                     {:id id &as response} response
+                     response (do (protocol.message
+                                   [[:id {:sym id}]
+                                    [:op {:string :retry}]
+                                    [:message {:string (fennel.view response {:one-line? true})}]])
+                                  (protocol.recieve id))))
 
                  (fn protocol.read [...]
                    (let [pack (fn [...] (doto [...] (tset :n (select :# ...))))
