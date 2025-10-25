@@ -170,19 +170,6 @@
                      (. (getmetatable env.io.stdin) :__index)
                      lua-print print]
 
-                 (fn protocol.receive [id]
-                   ;; Read one message from the protocol environment. If
-                   ;; the received message doesn't correspond to the
-                   ;; current protocol.id, send a retry OP so the client
-                   ;; retries the message later.
-                   (match (eval (io/read :l) {:env {}})
-                     {:id id &as response} response
-                     response (do (protocol.message
-                                   [[:id {:sym id}]
-                                    [:op {:string :retry}]
-                                    [:message {:string (fennel.view response {:one-line? true})}]])
-                                  (protocol.recieve id))))
-
                  (fn protocol.read [...]
                    (let [pack (fn [...] (doto [...] (tset :n (select :# ...))))
                          formats (pack ...)
@@ -232,13 +219,6 @@
                    (set fd.read fd/read)
                    (set fd.write fd/write))
 
-                 (fn protocol.message [data]
-                   ;; General purpose way of sending messages to the editor.
-                   (reset-io env)
-                   (on-values [(protocol.format data)])
-                   (io.flush)
-                   (set-io env))
-
                  (fn done [id]
                    ;; Sends the message that processing the `id` is complete and
                    ;; resets the `protocol.id`.
@@ -246,6 +226,41 @@
                      (set protocol*.id -1)
                      (protocol.message [[:id {:sym id}]
                                         [:op {:string :done}]])))
+
+                 (fn err [id ?kind mesg ?trace]
+                   ;; Sends back the error information and completes the
+                   ;; communication.
+                   (protocol.message [[:id {:sym id}]
+                                      [:op {:string :error}]
+                                      [:type {:string (if ?kind ?kind :runtime)}]
+                                      [:data {:string mesg}]
+                                      (when ?trace
+                                        [:traceback {:string ?trace}])])
+                   (done id))
+
+                 (fn protocol.receive [id]
+                   ;; Read one message from the protocol environment. If
+                   ;; the received message doesn't correspond to the
+                   ;; current protocol.id, send a retry OP so the client
+                   ;; retries the message later.
+                   (let [_ (reset-io env)
+                         mesg (read-chunk {:stack-size 0})
+                         _ (set-io env)]
+                     (match (pcall eval mesg {:env {}})
+                       (true {:id id &as response}) response
+                       (true msg?) (do (protocol.message
+                                        [[:id {:sym id}]
+                                         [:op {:string :retry}]
+                                         [:message {:string (fennel.view msg? {:one-line? true})}]])
+                                       (protocol.recieve id))
+                       (false msg?) (do (err id nil (or msg? \"failed to read data\") nil)))))
+
+                 (fn protocol.message [data]
+                   ;; General purpose way of sending messages to the editor.
+                   (reset-io env)
+                   (on-values [(protocol.format data)])
+                   (io.flush)
+                   (set-io env))
 
                  (fn count-expressions [data]
                    ;; Counts amount of expressions in the given string.  If the
@@ -283,17 +298,6 @@
                      (protocol.message [[:id {:sym id}]
                                         [:op {:string protocol.op}]
                                         [:values {:list (icollect [_ v (ipairs data)] (view v))}]]))
-                   (done id))
-
-                 (fn err [id ?kind mesg ?trace]
-                   ;; Sends back the error information and completes the
-                   ;; communication.
-                   (protocol.message [[:id {:sym id}]
-                                      [:op {:string :error}]
-                                      [:type {:string (if ?kind ?kind :runtime)}]
-                                      [:data {:string mesg}]
-                                      (when ?trace
-                                        [:traceback {:string ?trace}])])
                    (done id))
 
                  (fn remove-locus [msg]
