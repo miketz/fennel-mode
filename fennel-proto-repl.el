@@ -4,7 +4,7 @@
 
 ;; Author: Andrey Listopadov
 ;; URL: https://git.sr.ht/~technomancy/fennel-mode
-;; Version: 0.6.2
+;; Version: 0.6.3
 ;; Created: 2023-04-08
 ;; Keywords: languages, tools
 ;; Package-Requires: ((emacs "28.1"))
@@ -114,21 +114,22 @@
            (-> [[:id {:sym 0}]
                 [:op {:string \"init\"}]
                 [:status {:string \"fail\"}]
-                [:data {:string (.. \"unable to load Fennel from module: \" fennel-module)}]]
+                [:data {:string (.. \"unable to load Fennel from module: \"
+                                    (tostring fennel-module) \"\n\"
+                                    (tostring fennel))}]]
                (setmetatable
                 {:__fennelview
                  (fn [data]
                    ;; faking protocol environment for the format-function to work
                    (format-function {:fennel {:view #(string.format \"%q\" $)}} data))}))
-           (let [{: view : eval : traceback : parser
-                  : version &as fennel} fennel
+           (let [{: view : eval : traceback : parser :version fennel-version} fennel
                  {:concat t/concat} table
                  InternalError {}
                  protocol-env (collect [k v (pairs _G)]
                                 (when (or (not= k :_G)
                                           (not= k :___repl___))
                                   (values k v)))
-                 protocol* {:version \"0.6.2\"
+                 protocol* {:version \"0.6.3\"
                             :id -1
                             :op nil
                             :env protocol-env}
@@ -253,7 +254,7 @@
                                          [:op {:string :retry}]
                                          [:message {:string (fennel.view msg? {:one-line? true})}]])
                                        (protocol.recieve id))
-                       (false msg?) (do (err id nil (or msg? \"failed to read data\") nil)))))
+                       (false msg?) (err id nil (or msg? \"failed to read data\") nil))))
 
                  (fn protocol.message [data]
                    ;; General purpose way of sending messages to the editor.
@@ -287,7 +288,7 @@
                      :downgrade (callback) ; downgrade passed as a callback
                      :exit (done id))
                    (when (= msg \"\") (done id))
-                   (.. msg \"\n\"))
+                   (.. (tostring msg) \"\n\"))
 
                  (fn data [id data]
                    ;; Sends the data back to the process and completes the
@@ -333,15 +334,15 @@
                                      mesg)]
                            (case (and msg (eval msg {:env protocol.env}))
                              {: id :eval code} (accept id :eval code)
-                             {: id :complete sym} (accept id :complete (.. \",complete \" sym))
-                             {: id :doc sym} (accept id :doc (.. \",doc \" sym))
-                             {: id :reload module} (accept id :reload (.. \",reload \" module))
-                             {: id :find val} (accept id :find (.. \",find \" val))
-                             {: id :compile expr} (accept id :compile (.. \",compile \" expr))
-                             {: id :return expr} (accept id :return (.. \",return \" expr))
-                             {: id :apropos re} (accept id :apropos (.. \",apropos \" re))
-                             {: id :apropos-doc re} (accept id :apropos-doc (.. \",apropos-doc \" re))
-                             {: id :apropos-show-docs re} (accept id :apropos-show-docs (.. \",apropos-show-docs \" re))
+                             {: id :complete sym} (accept id :complete (.. \",complete \" (tostring sym)))
+                             {: id :doc sym} (accept id :doc (.. \",doc \" (tostring sym)))
+                             {: id :reload module} (accept id :reload (.. \",reload \" (tostring module)))
+                             {: id :find val} (accept id :find (.. \",find \" (tostring val)))
+                             {: id :compile expr} (accept id :compile (.. \",compile \" (tostring expr)))
+                             {: id :return expr} (accept id :return (.. \",return \" (tostring expr)))
+                             {: id :apropos re} (accept id :apropos (.. \",apropos \" (tostring re)))
+                             {: id :apropos-doc re} (accept id :apropos-doc (.. \",apropos-doc \" (tostring re)))
+                             {: id :apropos-show-docs re} (accept id :apropos-show-docs (.. \",apropos-show-docs \" (tostring re)))
                              {: id :help \"\"} (accept id :help \",help\")
                              {: id :reset \"\"} (accept id :reset \",reset\")
                              {: id :exit \"\"} (accept id :exit \",exit\")
@@ -355,12 +356,12 @@
                    (fn ___repl___.onError [type* msg source]
                      (match (values type* msg)
                        (_ {:type InternalError : cause :data ?msg})
-                       (err -1 :proto-repl (if ?msg (.. cause \": \" (remove-locus ?msg)) cause))
+                       (err -1 :proto-repl (if ?msg (.. (tostring cause) \": \" (remove-locus ?msg)) cause))
                        \"Lua Compile\"
                        (err protocol.id :lua
                             (.. \"Bad code generated - likely a bug with the compiler:\n\"
                                 \"--- Generated Lua Start ---\n\"
-                                source
+                                (tostring source)
                                 \"\n--- Generated Lua End ---\n\"))
                        \"Runtime\"
                        (err protocol.id :runtime
@@ -384,7 +385,7 @@
                (-> [[:id {:sym 0}]
                     [:op {:string \"init\"}]
                     [:status {:string \"fail\"}]
-                    [:data {:string (.. \"unsupported Fennel version: \" version)}]]
+                    [:data {:string (.. \"unsupported Fennel version: \" (tostring fennel-version))}]]
                    (setmetatable {:__fennelview #(protocol.format $)})))))))"
   "Upgrade code for the basic Fennel REPL.
 
