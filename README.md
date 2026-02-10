@@ -101,6 +101,7 @@ more robust interactive experience.  Advantages over the default
 * Support for Eldoc and Xref without eglot/fennel-ls.
 * Configurable dynamic font-locking of globals and macros
 * Project integration via `project.el` or `projectile`.
+* Integration with the [eros][10] package.
 
 Installation is similar to the other modules:
 
@@ -208,3 +209,4 @@ Licensed under the same license as Emacs (GPL v3 or later); see LICENSE
 [7]: https://gitlab.com/andreyorst/fennel-proto-repl-protocol
 [8]: https://git.sr.ht/~xerool/fennel-ls
 [9]: https://www.gnu.org/software/emacs/manual/html_mono/eglot.html
+[10]: https://github.com/xiongtx/eros

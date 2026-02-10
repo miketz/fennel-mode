@@ -366,7 +366,7 @@
           (goto-char (point-max))
           (let (res done)
             (fpr--with-mocks ((fennel-proto-repl--display-result
-                               (lambda (values)
+                               (lambda (values &rest _)
                                  (setq done t)
                                  (setq res values))))
               (fennel-proto-repl-eval-last-sexp)
@@ -381,7 +381,7 @@
           (goto-char (point-max))
           (let (res done)
             (fpr--with-mocks ((fennel-proto-repl--display-result
-                               (lambda (values)
+                               (lambda (values &rest _)
                                  (setq done t)
                                  (setq res values))))
               (fennel-proto-repl-eval-last-sexp 'and-go)
@@ -399,7 +399,7 @@
           (goto-char (point-max))
           (let (res done)
             (fpr--with-mocks ((fennel-proto-repl--display-result
-                               (lambda (values)
+                               (lambda (values &rest _)
                                  (setq done t)
                                  (setq res values))))
               (fennel-proto-repl-eval-buffer)
@@ -417,7 +417,7 @@
           (forward-char 2)
           (let (res done)
             (fpr--with-mocks ((fennel-proto-repl--display-result
-                               (lambda (values)
+                               (lambda (values &rest _)
                                  (setq done t)
                                  (setq res values))))
               (fennel-proto-repl-eval-defun)
@@ -435,7 +435,7 @@
           (forward-char 2)
           (let (res done)
             (fpr--with-mocks ((fennel-proto-repl--display-result
-                               (lambda (values)
+                               (lambda (values &rest _)
                                  (setq done t)
                                  (setq res values))))
               (fennel-proto-repl-eval-form-and-next)
@@ -454,7 +454,7 @@
           (forward-char 2)
           (let (res done)
             (fpr--with-mocks ((fennel-proto-repl--display-result
-                               (lambda (values)
+                               (lambda (values &rest _)
                                  (setq done t)
                                  (setq res values))))
               (fennel-proto-repl-eval-paragraph)

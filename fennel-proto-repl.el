@@ -105,6 +105,7 @@
 (require 'project)
 
 (declare-function markdown-mode "ext:markdown-mode")
+(declare-function eros-eval-overlay "ext:eros")
 
 (defvar fennel-proto-repl--protocol
   "(fn protocol [format-function fennel-module]
@@ -387,7 +388,7 @@
                     [:status {:string \"fail\"}]
                     [:data {:string (.. \"unsupported Fennel version: \" (tostring fennel-version))}]]
                    (setmetatable {:__fennelview #(protocol.format $)})))))))"
-  "Upgrade code for the basic Fennel REPL.
+    "Upgrade code for the basic Fennel REPL.
 
 This code is sent to the REPL as a part of the initialization process.
 Once evaluated, the REPL starts accepting messages accordingly to the
@@ -665,6 +666,12 @@ names that should be font-locked:
                              (const :tag "ignore scoping rules" unscoped-macro))
                       (const :tag "Defined globals" global)))
   :package-version '(fennel-mode "0.9.2"))
+
+(defcustom fennel-proto-repl-eval-overlay nil
+  "Whether or not to show evaluation overlay at point."
+  :group 'fennel-proto-repl
+  :type 'boolean
+  :package-version '(fennel-mode "0.9.4"))
 
 ;;; Input massaging
 
@@ -1601,10 +1608,26 @@ start the REPL only check for one."
       (buffer-name)))
     (fennel-proto-repl fennel-program))))
 
-(defun fennel-proto-repl--display-result (values)
-  "Display result VALUES in the echo area."
+(defun fennel-proto-repl--eval-overlay (string pos buffer)
+  "Display evaluation overlay with STRING at POS in BUFFER."
+  (if (not (or (fboundp 'eros-eval-overlay)
+               (require 'eros nil 'no-error)))
+      (warn "Fennel Proto REPL eval overlay requires the `eros' package.")
+    (when (and pos buffer)
+      (with-current-buffer buffer
+        (let ((;; needs to be se for an overlay not to be cleared immediatelly
+               this-command 'fennel-proto-repl--eval-overlay))
+          (eros-eval-overlay string pos))))))
+
+(defun fennel-proto-repl--display-result (values &optional end-pos buffer)
+  "Display result VALUES in the echo area.
+
+Optional END-POS and BUFFER are used for `eros-eval-overlay'
+integration."
   (let* ((text (ansi-color-apply (string-trim (string-join values "\t"))))
          (end (length text)))
+    (when fennel-proto-repl-eval-overlay
+      (fennel-proto-repl--eval-overlay text end-pos buffer))
     (let ((message-log-max (and fennel-proto-repl-loud message-log-max)))
       (message "%s"
                ;; `ansi-color-apply' adds `font-lock-face' properties but `message'
@@ -1647,13 +1670,14 @@ If START is a string and END is nil, send the string to the
 process.  Prefix argument AND-GO means switch to the REPL buffer
 afterward."
   (interactive "r\nP")
-  (let ((expr (if (and (stringp start) (null end))
+  (let ((buffer (current-buffer))
+        (expr (if (stringp start)
                   (substring-no-properties start)
                 (buffer-substring-no-properties start end))))
     (when (fennel-proto-repl--check-for-repl)
       (fennel-proto-repl-send-message
        :eval expr
-       #'fennel-proto-repl--display-result)))
+       (lambda (values) (fennel-proto-repl--display-result values end buffer)))))
   (when and-go (pop-to-buffer fennel-proto-repl--buffer)))
 
 (defun fennel-proto-repl-eval-buffer (&optional and-go)
@@ -1696,7 +1720,7 @@ afterward."
   (interactive "P")
   (fennel-proto-repl-eval-region
    (thing-at-point 'defun)
-   nil
+   (save-excursion (end-of-thing 'defun))
    and-go))
 
 (defun fennel-proto-repl-interrupt ()
@@ -1737,8 +1761,8 @@ interactable error screen."
   "Guess the module name for the current file based on project structure.
 
 Absolute name of the current file or buffer is checked against the
-PROJECT-ROOT. If matched, the PROJECT-ROOT part is removed from the
-filename. Then all path separators are replaced with dots."
+PROJECT-ROOT.  If matched, the PROJECT-ROOT part is removed from the
+filename.  Then all path separators are replaced with dots."
   (let ((project-root (expand-file-name project-root)))
     (thread-last
       (or (buffer-file-name) (buffer-name))
