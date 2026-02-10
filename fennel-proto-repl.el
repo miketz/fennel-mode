@@ -1614,10 +1614,17 @@ start the REPL only check for one."
                (require 'eros nil 'no-error)))
       (warn "Fennel Proto REPL eval overlay requires the `eros' package.")
     (when (and pos buffer)
-      (with-current-buffer buffer
-        (let ((;; needs to be se for an overlay not to be cleared immediatelly
-               this-command 'fennel-proto-repl--eval-overlay))
-          (eros-eval-overlay string pos))))))
+      (with-temp-buffer
+        (insert string)
+        (setq-local delay-mode-hooks t)
+        (setq-local delayed-mode-hooks nil)
+        (fennel-mode)
+        (font-lock-fontify-region (point-min) (point-max))
+        (let ((string (buffer-substring (point-min) (point-max))))
+          (with-current-buffer buffer
+            (let ((;; needs to be se for an overlay not to be cleared immediatelly
+                   this-command 'fennel-proto-repl--eval-overlay))
+              (eros-eval-overlay string pos))))))))
 
 (defun fennel-proto-repl--display-result (values &optional end-pos buffer)
   "Display result VALUES in the echo area.
